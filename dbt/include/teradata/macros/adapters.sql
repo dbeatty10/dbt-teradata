@@ -8,6 +8,51 @@
     {{ return(load_result('list_schemas').table) }}
 {% endmacro %}
 
+{% macro teradata__create_schema(relation) -%}
+    {%- call statement('create_database') -%}
+        CREATE DATABASE {{ relation.without_identifier() }}
+            AS PERMANENT = 60e6, -- 60MB
+            SPOOL = 120e6; -- 120MB
+    {%- endcall -%}
+
+    {%- call statement('grant_create_proc') -%}
+        GRANT CREATE PROCEDURE ON {{ relation.without_identifier() }} TO dbc
+    {%- endcall -%}
+
+    {%- call statement('create_proc_drop_relation') -%}
+        REPLACE PROCEDURE {{ relation.without_identifier() }}.dbt_drop_relation_if_exists(
+          IN relation_type varchar(10),
+          IN full_name varchar(256)
+        )
+        BEGIN
+          DECLARE sql_stmt VARCHAR(500)  CHARACTER SET Unicode;
+          DECLARE msg VARCHAR(400) CHARACTER SET Unicode;
+
+          DECLARE exit HANDLER FOR SqlException
+          BEGIN
+            IF SqlCode = 3807 THEN SET msg = full_name || ' does not exist.';
+            ELSEIF SqlCode = 3853 THEN SET msg = full_name || ' is not a table.';
+            ELSEIF SqlCode = 3854 THEN SET msg = full_name || ' is not a view.';
+            ELSE
+              RESIGNAL;
+            END IF;
+          END;
+
+          SET sql_stmt = 'DROP ' || relation_type || ' ' || full_name || ';';
+          EXECUTE IMMEDIATE sql_stmt;
+        END;
+    {%- endcall -%}
+{% endmacro %}
+
+{% macro teradata__drop_schema(relation) -%}
+    {%- call statement('delete_database') -%}
+        delete database {{ relation.without_identifier() }};
+    {% endcall %}
+    {%- call statement('drop_database') -%}
+        drop database {{ relation.without_identifier() }};
+    {% endcall %}
+{% endmacro %}
+
 {% macro teradata__drop_relation(relation) -%}
     {% call statement('drop_relation', auto_begin=False) -%}
         call {{ relation.schema }}.dbt_drop_relation_if_exists('{{ relation.type }}', '{{ relation }}');
