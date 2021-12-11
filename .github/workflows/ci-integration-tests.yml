@@ -88,3 +88,11 @@ jobs:
             echo "Waiting 10 seconds before the next attempt."
             sleep 10
           done
+
+      - name: Run tests
+        run: pytest test/integration/teradata-17.10.dbtspec
+      - uses: actions/upload-artifact@v2
+        if: ${{ failure() ||  cancelled() }}
+        with:
+          name: virtualbox-logs
+          path: /Users/runner/VirtualBox*
