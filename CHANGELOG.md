@@ -1,4 +1,4 @@
-## dbt-teradata 0.19.0 (TBD)
+## dbt-teradata 0.19.0.1 (December 14, 2021)
 
 ### Features
 * Added support for LOGMECH authentication parameter. With LOGMECH support, the adapter can now authenticate using LDAP, Kerberes, TDNEGO and the database native protocol ([#2](https://github.com/dbeatty10/dbt-teradata/pull/2))
